@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.IO;
 
 public class MainManager : MonoBehaviour
 {
+   
     public Brick BrickPrefab;
     public int LineCount = 6;
     public Rigidbody Ball;
@@ -14,9 +16,19 @@ public class MainManager : MonoBehaviour
     public GameObject GameOverText;
     
     private bool m_Started = false;
-    private int m_Points;
+    private int m_Points = 0;
+    private int highScore;
     
     private bool m_GameOver = false;
+public Text Name;
+public Text GameOverScoreText;
+public Text GameOverNameText;
+private string highScoreName;
+public Text HighScoreText;
+public Text HighScoreNameText;
+
+   
+    
 
     
     // Start is called before the first frame update
@@ -34,6 +46,10 @@ public class MainManager : MonoBehaviour
                 var brick = Instantiate(BrickPrefab, position, Quaternion.identity);
                 brick.PointValue = pointCountArray[i];
                 brick.onDestroyed.AddListener(AddPoint);
+                PlayerName();
+                LoadScore();
+                HighScoreText.text = $"High Score: {highScore}";
+                HighScoreNameText.text = $"High Score Player: {highScoreName}";
             }
         }
     }
@@ -64,13 +80,65 @@ public class MainManager : MonoBehaviour
 
     void AddPoint(int point)
     {
+        if (!m_GameOver)
+        {
         m_Points += point;
         ScoreText.text = $"Score : {m_Points}";
+        CheckHighScore();
+        }
     }
-
+    private void CheckHighScore()
+    {
+        if (m_Points> highScore)
+        {
+            highScore = m_Points;
+            highScoreName = Menu.playerName;
+        }
+    }
     public void GameOver()
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+        SaveScore();
+        DisplayGameOverInfo();
+        
+    }
+    private void DisplayGameOverInfo()
+    {
+        GameOverScoreText.text = $"FinalScore: {m_Points}";
+        GameOverNameText.text = $"Player: {Menu.playerName}";
+    }
+    public void PlayerName()
+    {
+        Name.text = Menu.playerName;
+    }
+    [System.Serializable]
+    
+        class SaveData
+    {
+        public int HighScore;
+        public string PlayerName;
+    }
+    public void SaveScore()
+    {
+        SaveData data = new SaveData();
+        data.HighScore = highScore;
+        data.PlayerName = highScoreName;
+
+        string json = JsonUtility.ToJson(data);
+
+        File.WriteAllText(Application.persistentDataPath + "/saveFile.json", json);
+    }
+    public void LoadScore()
+    {
+        string path = Application.persistentDataPath + "/saveFile.json";
+
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+            highScore = data.HighScore;
+            highScoreName = data.PlayerName;
+        }
     }
 }
